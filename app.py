@@ -11,7 +11,6 @@ app.config['SECRET_KEY'] = os.getenv('SECRET_KEY', 'secret-key-123')
 
 database_url = os.getenv('DATABASE_URL')
 if database_url:
-    
     if '?' in database_url:
         app.config['SQLALCHEMY_DATABASE_URI'] = database_url + '&sslmode=require'
     else:
@@ -104,17 +103,17 @@ def view_song(id):
 def add_song():
     if request.method == 'POST':
         artist = request.form.get('artist_text', '')
-        phonogram = request.form.get('phonogram_manufacturer', '')
-        song_display_name = f"{artist} - {phonogram}" if artist and phonogram else request.form.get('song_display_name', '')
+        track = request.form.get('track_duration', '')
+        song_display_name = f"{artist} - {track}" if artist and track else track or artist or ''
 
         song = Song(
             song_display_name=song_display_name,
-            track_duration=request.form.get('track_duration'),
+            track_duration=track,
             music_author=request.form.get('music_author'),
             lyrics_author=request.form.get('lyrics_author'),
             genre=request.form.get('genre', 'CHR'),
             artist_text=artist,
-            phonogram_manufacturer=phonogram
+            phonogram_manufacturer=request.form.get('phonogram_manufacturer', '')
         )
         db.session.add(song)
         db.session.commit()
@@ -129,16 +128,16 @@ def edit_song(id):
 
     if request.method == 'POST':
         artist = request.form.get('artist_text', '')
-        phonogram = request.form.get('phonogram_manufacturer', '')
-        song_display_name = f"{artist} - {phonogram}" if artist and phonogram else request.form.get('song_display_name', '')
+        track = request.form.get('track_duration', '')
+        song_display_name = f"{artist} - {track}" if artist and track else track or artist or ''
 
         song.song_display_name = song_display_name
-        song.track_duration = request.form.get('track_duration')
+        song.track_duration = track
         song.music_author = request.form.get('music_author')
         song.lyrics_author = request.form.get('lyrics_author')
         song.genre = request.form.get('genre', 'CHR')
         song.artist_text = artist
-        song.phonogram_manufacturer = phonogram
+        song.phonogram_manufacturer = request.form.get('phonogram_manufacturer', '')
 
         db.session.commit()
         return redirect(url_for('index'))
@@ -159,14 +158,14 @@ def fix_names():
     songs = Song.query.all()
     count = 0
     for song in songs:
-        if song.artist_text and song.phonogram_manufacturer:
-            song.song_display_name = f"{song.artist_text} - {song.phonogram_manufacturer}"
+        if song.artist_text and song.track_duration:
+            song.song_display_name = f"{song.artist_text} - {song.track_duration}"
+            count += 1
+        elif song.track_duration:
+            song.song_display_name = song.track_duration
             count += 1
         elif song.artist_text:
             song.song_display_name = song.artist_text
-            count += 1
-        elif song.phonogram_manufacturer:
-            song.song_display_name = song.phonogram_manufacturer
             count += 1
     db.session.commit()
     return f"""
