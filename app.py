@@ -11,7 +11,11 @@ app.config['SECRET_KEY'] = os.getenv('SECRET_KEY', 'secret-key-123')
 
 database_url = os.getenv('DATABASE_URL')
 if database_url:
-    app.config['SQLALCHEMY_DATABASE_URI'] = database_url
+    
+    if '?' in database_url:
+        app.config['SQLALCHEMY_DATABASE_URI'] = database_url + '&sslmode=require'
+    else:
+        app.config['SQLALCHEMY_DATABASE_URI'] = database_url + '?sslmode=require'
 else:
     app.config['SQLALCHEMY_DATABASE_URI'] = (
         f"postgresql://postgres:102030@localhost:5432/songs"
@@ -36,6 +40,11 @@ class Song(db.Model):
 
     def __repr__(self):
         return f'<Song {self.song_display_name}>'
+
+
+with app.app_context():
+    db.create_all()
+    print("✅ Таблицы созданы (или уже существуют)")
 
 
 @app.route('/')
@@ -214,14 +223,22 @@ def fix_names():
     """
 
 
+@app.route('/health')
+def health():
+    return "OK", 200
+
+
 if __name__ == '__main__':
     with app.app_context():
-        inspector = inspect(db.engine)
-        if 'songs' in inspector.get_table_names():
-            max_id = db.session.execute(text("SELECT COALESCE(MAX(id), 0) FROM songs;")).scalar()
-            db.session.execute(text(f"SELECT setval('songs_id_seq', {max_id + 1}, false);"))
-            db.session.commit()
-        db.create_all()
+        try:
+            inspector = inspect(db.engine)
+            if 'songs' in inspector.get_table_names():
+                max_id = db.session.execute(text("SELECT COALESCE(MAX(id), 0) FROM songs;")).scalar()
+                db.session.execute(text(f"SELECT setval('songs_id_seq', {max_id + 1}, false);"))
+                db.session.commit()
+        except Exception as e:
+            print(f"Ошибка при проверке таблицы: {e}")
+            db.create_all()
     
     port = int(os.getenv('PORT', 5000))
     app.run(debug=False, host='0.0.0.0', port=port)
