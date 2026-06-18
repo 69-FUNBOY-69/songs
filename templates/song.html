@@ -1,0 +1,68 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{{ song.song_display_name }}</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+</head>
+<body>
+<div class="container">
+    <h1>🎵 {{ song.song_display_name }} <span class="subtitle">#{{ song.id }}</span></h1>
+
+    <div class="song-card">
+        <div class="field">
+            <span class="label">Название произведения:</span>
+            <span class="value">{{ song.song_display_name }}</span>
+        </div>
+
+        <div class="field">
+            <span class="label">Название фонограммы:</span>
+            <span class="value">{{ song.track_duration or '—' }}</span>
+        </div>
+
+        <div class="field">
+            <span class="label">Исполнитель:</span>
+            <span class="value">{{ song.artist_text or '—' }}</span>
+        </div>
+
+        <div class="field">
+            <span class="label">Жанр:</span>
+            <span class="badge">{{ song.genre or '—' }}</span>
+        </div>
+
+        <div class="field">
+            <span class="label">Автор музыки:</span>
+            <div class="value multiline">{{ song.music_author or '—' }}</div>
+        </div>
+
+        <div class="field">
+            <span class="label">Автор текста:</span>
+            <div class="value multiline">{{ song.lyrics_author or '—' }}</div>
+        </div>
+
+        <div class="field">
+            <span class="label">Изготовитель фонограммы:</span>
+            <span class="value">{{ song.phonogram_manufacturer or '—' }}</span>
+        </div>
+    </div>
+
+    <div class="actions" style="margin-top:20px;">
+        <div class="action-group">
+            <a href="/edit/{{ song.id }}" class="btn btn-warning">✏️</a>
+            <span class="action-label">Редактировать</span>
+        </div>
+        <div class="action-group">
+            <a href="/" class="btn btn-outline">←</a>
+            <span class="action-label">Назад к списку</span>
+        </div>
+        <div class="action-group">
+            <form method="POST" action="/delete/{{ song.id }}" style="display:inline;" onsubmit="return confirm('Удалить песню?')">
+                <button type="submit" class="btn btn-danger">🗑️</button>
+            </form>
+            <span class="action-label">Удалить</span>
+        </div>
+    </div>
+</div>
+</body>
+</html>

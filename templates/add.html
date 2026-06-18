@@ -1,0 +1,82 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Добавить песню</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+</head>
+<body>
+<div class="container">
+    <h1>➕ Добавить запись</h1>
+
+    <div class="info" style="background:#e8f4fd; padding:12px; border-radius:6px; margin-bottom:20px;">
+        💡 Название произведения автоматически составится из <strong>Исполнителя</strong> и <strong>Названия фонограммы</strong>
+    </div>
+
+    <form method="POST" action="/add">
+
+        <div class="form-group">
+            <label>Исполнитель (ФИО или название коллектива) <span class="required">*</span></label>
+            <input type="text" name="artist_text" placeholder="Введите имя исполнителя или группы" required>
+            <div class="help-text">Например: Queen, The Beatles, Артист</div>
+        </div>
+
+        <div class="form-group">
+            <label>Название фонограммы (трека) <span class="required">*</span></label>
+            <input type="text" name="track_duration" placeholder="Введите название трека" required>
+            <div class="help-text">Например: Bohemian Rhapsody, Yesterday, Название песни</div>
+        </div>
+
+        <div class="form-group" style="background:#f8f9fa; padding:12px; border-radius:6px; border:2px dashed #4a90d9;">
+            <label style="color:#4a90d9;">📝 Название произведения (сформируется автоматически)</label>
+            <input type="text" id="preview_name" value="Исполнитель - Название фонограммы" readonly style="background:#fff; border:2px solid #4a90d9; color:#4a90d9; font-weight:bold;">
+        </div>
+
+        <div class="form-group">
+            <label>Жанр</label>
+            <input type="text" name="genre" value="CHR" placeholder="Например: CHR, Rock, Pop">
+            <div class="help-text">Обычно: CHR, Rock, Pop, Dance, Classical</div>
+        </div>
+
+        <div class="form-group">
+            <label>Автор музыки</label>
+            <textarea name="music_author" placeholder="Введите ФИО авторов музыки (через запятую)"></textarea>
+            <div class="help-text">Например: Игорь Матвиенко, Сергей Жуков</div>
+        </div>
+
+        <div class="form-group">
+            <label>Автор текста</label>
+            <textarea name="lyrics_author" placeholder="Введите ФИО авторов текста (через запятую)"></textarea>
+            <div class="help-text">Например: Александр Шаганов, Михаил Андреев</div>
+        </div>
+
+        <div class="form-group">
+            <label>Изготовитель фонограммы (лейбл)</label>
+            <input type="text" name="phonogram_manufacturer" placeholder="Введите название лейбла">
+            <div class="help-text">Например: Warner Music, Sony Music, Universal</div>
+        </div>
+
+        <div style="display:flex; gap:10px; flex-wrap:wrap; margin-top:10px;">
+            <button type="submit" class="btn btn-success">💾 Сохранить</button>
+            <a href="/" class="btn btn-outline">← Назад</a>
+        </div>
+    </form>
+</div>
+
+<script>
+    const artistInput = document.querySelector('input[name="artist_text"]');
+    const phonogramInput = document.querySelector('input[name="phonogram_manufacturer"]');
+    const previewInput = document.getElementById('preview_name');
+
+    function updatePreview() {
+        const artist = artistInput.value.trim() || 'Исполнитель';
+        const phonogram = phonogramInput.value.trim() || 'Название фонограммы';
+        previewInput.value = artist + ' - ' + phonogram;
+    }
+
+    artistInput.addEventListener('input', updatePreview);
+    phonogramInput.addEventListener('input', updatePreview);
+</script>
+</body>
+</html>

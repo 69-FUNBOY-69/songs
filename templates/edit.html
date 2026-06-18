@@ -1,0 +1,85 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Редактировать песню</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+</head>
+<body>
+<div class="container">
+    <h1>✏️ Редактировать запись <span class="subtitle">#{{ song.id }}</span></h1>
+
+    <div class="info" style="background:#e8f4fd; padding:12px; border-radius:6px; margin-bottom:20px;">
+        💡 Название произведения автоматически составится из <strong>Исполнителя</strong> и <strong>Названия фонограммы</strong>
+    </div>
+
+    <form method="POST" action="/edit/{{ song.id }}">
+
+        <div class="form-group">
+            <label>Исполнитель (ФИО или название коллектива) <span class="required">*</span></label>
+            <input type="text" name="artist_text" value="{{ song.artist_text or '' }}" placeholder="Введите имя исполнителя или группы" required>
+            <div class="help-text">Например: Queen, The Beatles, Артист</div>
+        </div>
+
+        <div class="form-group">
+            <label>Название фонограммы (трека) <span class="required">*</span></label>
+            <input type="text" name="track_duration" value="{{ song.track_duration or '' }}" placeholder="Введите название трека" required>
+            <div class="help-text">Например: Bohemian Rhapsody, Yesterday, Название песни</div>
+        </div>
+
+        <div class="form-group" style="background:#f8f9fa; padding:12px; border-radius:6px; border:2px dashed #4a90d9;">
+            <label style="color:#4a90d9;">📝 Название произведения (сформируется автоматически)</label>
+            <input type="text" id="preview_name" value="{{ song.artist_text or 'Исполнитель' }} - {{ song.track_duration or 'Название фонограммы' }}" readonly style="background:#fff; border:2px solid #4a90d9; color:#4a90d9; font-weight:bold;">
+        </div>
+
+        <div class="form-group">
+            <label>Жанр</label>
+            <input type="text" name="genre" value="{{ song.genre or 'CHR' }}" placeholder="Например: CHR, Rock, Pop">
+            <div class="help-text">Обычно: CHR, Rock, Pop, Dance, Classical</div>
+        </div>
+
+        <div class="form-group">
+            <label>Автор музыки</label>
+            <textarea name="music_author" placeholder="Введите ФИО авторов музыки (через запятую)">{{ song.music_author or '' }}</textarea>
+            <div class="help-text">Например: Игорь Матвиенко, Сергей Жуков</div>
+        </div>
+
+        <div class="form-group">
+            <label>Автор текста</label>
+            <textarea name="lyrics_author" placeholder="Введите ФИО авторов текста (через запятую)">{{ song.lyrics_author or '' }}</textarea>
+            <div class="help-text">Например: Александр Шаганов, Михаил Андреев</div>
+        </div>
+
+        <div class="form-group">
+            <label>Изготовитель фонограммы (лейбл)</label>
+            <input type="text" name="phonogram_manufacturer" value="{{ song.phonogram_manufacturer or '' }}" placeholder="Введите название лейбла">
+            <div class="help-text">Например: Warner Music, Sony Music, Universal</div>
+        </div>
+
+        <div class="actions" style="margin-top:10px;">
+            <button type="submit" class="btn btn-primary">💾 Сохранить</button>
+            <a href="/" class="btn btn-outline">← Назад</a>
+            <form method="POST" action="/delete/{{ song.id }}" style="display:inline;" onsubmit="return confirm('Удалить песню?')">
+                <button type="submit" class="btn btn-danger">🗑️ Удалить</button>
+            </form>
+        </div>
+    </form>
+</div>
+
+<script>
+    const artistInput = document.querySelector('input[name="artist_text"]');
+    const phonogramInput = document.querySelector('input[name="phonogram_manufacturer"]');
+    const previewInput = document.getElementById('preview_name');
+
+    function updatePreview() {
+        const artist = artistInput.value.trim() || 'Исполнитель';
+        const phonogram = phonogramInput.value.trim() || 'Название фонограммы';
+        previewInput.value = artist + ' - ' + phonogram;
+    }
+
+    artistInput.addEventListener('input', updatePreview);
+    phonogramInput.addEventListener('input', updatePreview);
+</script>
+</body>
+</html>
