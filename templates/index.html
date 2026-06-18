@@ -170,11 +170,10 @@
             <a href="/?page={{ page - 1 }}{% if search %}&search={{ search }}{% endif %}{% if per_page %}&per_page={{ per_page }}{% endif %}{% if sort_by %}&sort_by={{ sort_by }}{% endif %}{% if sort_order %}&sort_order={{ sort_order }}{% endif %}">◀ Назад</a>
         {% endif %}
 
+        <a href="/?page=1{% if search %}&search={{ search }}{% endif %}{% if per_page %}&per_page={{ per_page }}{% endif %}{% if sort_by %}&sort_by={{ sort_by }}{% endif %}{% if sort_order %}&sort_order={{ sort_order }}{% endif %}" {% if page == 1 %}class="active"{% endif %}>1</a>
+
         {% if page > 3 %}
-            <a href="/?page=1{% if search %}&search={{ search }}{% endif %}{% if per_page %}&per_page={{ per_page }}{% endif %}{% if sort_by %}&sort_by={{ sort_by }}{% endif %}{% if sort_order %}&sort_order={{ sort_order }}{% endif %}">1</a>
             <span class="dots">...</span>
-        {% elif page > 1 %}
-            <a href="/?page=1{% if search %}&search={{ search }}{% endif %}{% if per_page %}&per_page={{ per_page }}{% endif %}{% if sort_by %}&sort_by={{ sort_by }}{% endif %}{% if sort_order %}&sort_order={{ sort_order }}{% endif %}">1</a>
         {% endif %}
 
         {% for p in range(page - 2, page + 3) %}
@@ -187,16 +186,19 @@
 
         {% if page < total_pages - 2 %}
             <span class="dots">...</span>
-            <a href="/?page={{ total_pages }}{% if search %}&search={{ search }}{% endif %}{% if per_page %}&per_page={{ per_page }}{% endif %}{% if sort_by %}&sort_by={{ sort_by }}{% endif %}{% if sort_order %}&sort_order={{ sort_order }}{% endif %}">{{ total_pages }}</a>
-        {% elif page < total_pages %}
-            <a href="/?page={{ total_pages }}{% if search %}&search={{ search }}{% endif %}{% if per_page %}&per_page={{ per_page }}{% endif %}{% if sort_by %}&sort_by={{ sort_by }}{% endif %}{% if sort_order %}&sort_order={{ sort_order }}{% endif %}">{{ total_pages }}</a>
+        {% endif %}
+
+        {% if total_pages > 1 %}
+            <a href="/?page={{ total_pages }}{% if search %}&search={{ search }}{% endif %}{% if per_page %}&per_page={{ per_page }}{% endif %}{% if sort_by %}&sort_by={{ sort_by }}{% endif %}{% if sort_order %}&sort_order={{ sort_order }}{% endif %}" {% if page == total_pages %}class="active"{% endif %}>
+                {{ total_pages }}
+            </a>
         {% endif %}
 
         {% if page < total_pages %}
             <a href="/?page={{ page + 1 }}{% if search %}&search={{ search }}{% endif %}{% if per_page %}&per_page={{ per_page }}{% endif %}{% if sort_by %}&sort_by={{ sort_by }}{% endif %}{% if sort_order %}&sort_order={{ sort_order }}{% endif %}">Вперед ▶</a>
         {% endif %}
     </div>
-
+            
 </div>
 
 <script>
