@@ -69,17 +69,17 @@
 
 <script>
     const artistInput = document.querySelector('input[name="artist_text"]');
-    const phonogramInput = document.querySelector('input[name="phonogram_manufacturer"]');
+    const trackInput = document.querySelector('input[name="track_duration"]');
     const previewInput = document.getElementById('preview_name');
 
     function updatePreview() {
         const artist = artistInput.value.trim() || 'Исполнитель';
-        const phonogram = phonogramInput.value.trim() || 'Название фонограммы';
-        previewInput.value = artist + ' - ' + phonogram;
+        const track = trackInput.value.trim() || 'Название фонограммы';
+        previewInput.value = artist + ' - ' + track;
     }
 
     artistInput.addEventListener('input', updatePreview);
-    phonogramInput.addEventListener('input', updatePreview);
+    trackInput.addEventListener('input', updatePreview);
 </script>
 </body>
 </html>
