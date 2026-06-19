@@ -27,6 +27,23 @@
             <a href="/?per_page=50{% if search %}&search={{ search }}{% endif %}" class="btn btn-sm {% if per_page == 50 %}btn-primary{% else %}btn-outline{% endif %}">50</a>
             <a href="/?per_page=100{% if search %}&search={{ search }}{% endif %}" class="btn btn-sm {% if per_page == 100 %}btn-primary{% else %}btn-outline{% endif %}">100</a>
             <a href="/add" class="btn btn-success">➕ Добавить</a>
+            
+            <!-- Экспорт -->
+            <div class="dropdown" style="position:relative; display:inline-block;">
+                <button class="btn btn-outline" onclick="toggleDropdown()">📤 Экспорт</button>
+                <div id="exportDropdown" style="display:none; position:absolute; background:white; border:1px solid #ddd; border-radius:8px; padding:5px 0; z-index:100; min-width:120px; box-shadow:0 4px 12px rgba(0,0,0,0.1);">
+                    <a href="/export?format=csv" class="btn" style="display:block; background:none; box-shadow:none; border-radius:0; padding:8px 16px; text-align:left; width:100%;">📄 CSV</a>
+                    <a href="/export?format=xlsx" class="btn" style="display:block; background:none; box-shadow:none; border-radius:0; padding:8px 16px; text-align:left; width:100%;">📊 XLSX</a>
+                    <a href="/export?format=txt" class="btn" style="display:block; background:none; box-shadow:none; border-radius:0; padding:8px 16px; text-align:left; width:100%;">📃 TXT</a>
+                </div>
+            </div>
+            
+            <!-- Импорт -->
+            <button class="btn btn-outline" onclick="document.getElementById('importFile').click()">📥 Импорт</button>
+            <input type="file" id="importFile" style="display:none" accept=".csv,.txt,.xlsx,.xls" onchange="importFile(this)">
+            
+            <!-- Массовое удаление -->
+            <button class="btn btn-danger" id="deleteSelectedBtn" style="display:none;" onclick="deleteSelected()">🗑️ Удалить выбранные</button>
         </div>
     </div>
 
@@ -36,6 +53,7 @@
         {% if per_page != 50 %}
             | Показано по {{ per_page }}
         {% endif %}
+        | <span id="selectedCount">Выбрано: 0</span>
     </div>
 
     <div class="table-wrapper">
@@ -43,7 +61,10 @@
             <table>
                 <thead>
                     <tr>
-                        <th style="width:70px;">
+                        <th>
+                            <input type="checkbox" id="selectAll" onchange="toggleAll(this)">
+                        </th>
+                        <th>
                             <a href="/?sort_by=id&sort_order={% if sort_by == 'id' and sort_order == 'desc' %}asc{% else %}desc{% endif %}{% if search %}&search={{ search }}{% endif %}{% if per_page %}&per_page={{ per_page }}{% endif %}" class="sort-link">
                                 ID
                                 {% if sort_by == 'id' %}
@@ -53,7 +74,7 @@
                                 {% endif %}
                             </a>
                         </th>
-                        <th style="min-width:220px;">
+                        <th>
                             <a href="/?sort_by=song_display_name&sort_order={% if sort_by == 'song_display_name' and sort_order == 'desc' %}asc{% else %}desc{% endif %}{% if search %}&search={{ search }}{% endif %}{% if per_page %}&per_page={{ per_page }}{% endif %}" class="sort-link">
                                 Название произведения
                                 {% if sort_by == 'song_display_name' %}
@@ -63,7 +84,7 @@
                                 {% endif %}
                             </a>
                         </th>
-                        <th style="min-width:180px;">
+                        <th>
                             <a href="/?sort_by=track_duration&sort_order={% if sort_by == 'track_duration' and sort_order == 'desc' %}asc{% else %}desc{% endif %}{% if search %}&search={{ search }}{% endif %}{% if per_page %}&per_page={{ per_page }}{% endif %}" class="sort-link">
                                 Название фонограммы
                                 {% if sort_by == 'track_duration' %}
@@ -73,7 +94,7 @@
                                 {% endif %}
                             </a>
                         </th>
-                        <th style="min-width:150px;">
+                        <th>
                             <a href="/?sort_by=music_author&sort_order={% if sort_by == 'music_author' and sort_order == 'desc' %}asc{% else %}desc{% endif %}{% if search %}&search={{ search }}{% endif %}{% if per_page %}&per_page={{ per_page }}{% endif %}" class="sort-link">
                                 Автор музыки
                                 {% if sort_by == 'music_author' %}
@@ -83,7 +104,7 @@
                                 {% endif %}
                             </a>
                         </th>
-                        <th style="min-width:150px;">
+                        <th>
                             <a href="/?sort_by=lyrics_author&sort_order={% if sort_by == 'lyrics_author' and sort_order == 'desc' %}asc{% else %}desc{% endif %}{% if search %}&search={{ search }}{% endif %}{% if per_page %}&per_page={{ per_page }}{% endif %}" class="sort-link">
                                 Автор текста
                                 {% if sort_by == 'lyrics_author' %}
@@ -93,8 +114,8 @@
                                 {% endif %}
                             </a>
                         </th>
-                        <th style="width:80px;">Жанр</th>
-                        <th style="min-width:200px;">
+                        <th>Жанр</th>
+                        <th>
                             <a href="/?sort_by=artist_text&sort_order={% if sort_by == 'artist_text' and sort_order == 'desc' %}asc{% else %}desc{% endif %}{% if search %}&search={{ search }}{% endif %}{% if per_page %}&per_page={{ per_page }}{% endif %}" class="sort-link">
                                 Исполнитель
                                 {% if sort_by == 'artist_text' %}
@@ -104,9 +125,9 @@
                                 {% endif %}
                             </a>
                         </th>
-                        <th style="min-width:180px;">
+                        <th>
                             <a href="/?sort_by=phonogram_manufacturer&sort_order={% if sort_by == 'phonogram_manufacturer' and sort_order == 'desc' %}asc{% else %}desc{% endif %}{% if search %}&search={{ search }}{% endif %}{% if per_page %}&per_page={{ per_page }}{% endif %}" class="sort-link">
-                                Изготовитель фонограммы
+                                Изготовитель
                                 {% if sort_by == 'phonogram_manufacturer' %}
                                     {% if sort_order == 'desc' %}↓{% else %}↑{% endif %}
                                 {% else %}
@@ -114,20 +135,23 @@
                                 {% endif %}
                             </a>
                         </th>
-                        <th style="width:200px;">Действия</th>
+                        <th>Действия</th>
                     </tr>
                 </thead>
                 <tbody>
                     {% if not songs %}
                         <tr>
-                            <td colspan="9" class="empty">
+                            <td colspan="10" class="empty">
                                 <span class="icon">🎵</span>
                                 Песен не найдено
                             </td>
                         </tr>
                     {% endif %}
                     {% for song in songs %}
-                    <tr>
+                    <tr data-id="{{ song.id }}">
+                        <td>
+                            <input type="checkbox" class="row-checkbox" onchange="updateSelectedCount()" value="{{ song.id }}">
+                        </td>
                         <td>{{ song.id }}</td>
                         <td><span class="truncate" title="{{ song.song_display_name }}">{{ song.song_display_name }}</span></td>
                         <td><span class="truncate" title="{{ song.track_duration }}">{{ song.track_duration or '-' }}</span></td>
@@ -146,9 +170,7 @@
                                 <span class="action-label">Редактировать</span>
                             </div>
                             <div class="action-group">
-                                <form method="POST" action="/delete/{{ song.id }}" style="display:inline;" onsubmit="return confirm('Удалить песню?')">
-                                    <button type="submit" class="btn btn-danger btn-sm" title="Удалить">🗑️</button>
-                                </form>
+                                <button onclick="deleteSingle({{ song.id }}, '{{ song.song_display_name|escape }}')" class="btn btn-danger btn-sm" title="Удалить">🗑️</button>
                                 <span class="action-label">Удалить</span>
                             </div>
                         </td>
@@ -156,12 +178,6 @@
                     {% endfor %}
                 </tbody>
             </table>
-        </div>
-    </div>
-
-    <div class="table-scroll-bottom" id="scrollBottom">
-        <div class="scroll-helper" style="overflow-x:auto; overflow-y:hidden; height:16px;">
-            <div style="width:100%; height:1px;"></div>
         </div>
     </div>
 
@@ -173,7 +189,7 @@
         <a href="/?page=1{% if search %}&search={{ search }}{% endif %}{% if per_page %}&per_page={{ per_page }}{% endif %}{% if sort_by %}&sort_by={{ sort_by }}{% endif %}{% if sort_order %}&sort_order={{ sort_order }}{% endif %}" {% if page == 1 %}class="active"{% endif %}>1</a>
 
         {% if page > 3 %}
-            <span class="dots">...</span>
+            <span class="dots" onclick="goToPage()" title="Ввести номер страницы">...</span>
         {% endif %}
 
         {% for p in range(page - 2, page + 3) %}
@@ -185,7 +201,7 @@
         {% endfor %}
 
         {% if page < total_pages - 2 %}
-            <span class="dots">...</span>
+            <span class="dots" onclick="goToPage()" title="Ввести номер страницы">...</span>
         {% endif %}
 
         {% if total_pages > 1 %}
@@ -200,9 +216,313 @@
     </div>
 </div>
 
+<!-- ===== МОДАЛЬНОЕ ОКНО ДЛЯ ВВОДА СТРАНИЦЫ ===== -->
+<div id="pageModal" style="display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.5); z-index:9999; justify-content:center; align-items:center;">
+    <div style="background:white; padding:30px 40px; border-radius:16px; box-shadow:0 20px 60px rgba(0,0,0,0.3); max-width:400px; width:90%; text-align:center;">
+        <h3 style="margin-top:0; margin-bottom:15px; color:#1a1a2e;">Перейти на страницу</h3>
+        <p style="color:#666; margin-bottom:15px; font-size:14px;">Введите номер страницы от 1 до {{ total_pages }}</p>
+        <input type="number" id="pageInput" min="1" max="{{ total_pages }}" value="{{ page }}" style="width:100%; padding:12px 16px; border:2px solid #ddd; border-radius:10px; font-size:18px; text-align:center; margin-bottom:15px; outline:none; transition:border-color 0.3s;">
+        <div style="display:flex; gap:10px; justify-content:center;">
+            <button onclick="goToPageSubmit()" class="btn btn-primary" style="flex:1;">Перейти</button>
+            <button onclick="closePageModal()" class="btn btn-outline" style="flex:1;">Отмена</button>
+        </div>
+    </div>
+</div>
+
+<!-- ===== МОДАЛЬНОЕ ОКНО ДЛЯ ПОДТВЕРЖДЕНИЯ УДАЛЕНИЯ ОДНОЙ ЗАПИСИ ===== -->
+<div id="deleteModal" style="display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.5); z-index:9999; justify-content:center; align-items:center;">
+    <div style="background:white; padding:35px 40px; border-radius:16px; box-shadow:0 20px 60px rgba(0,0,0,0.3); max-width:420px; width:90%; text-align:center;">
+        <div style="font-size:48px; margin-bottom:10px;">🗑️</div>
+        <h3 style="margin-top:0; margin-bottom:10px; color:#1a1a2e;">Удалить запись?</h3>
+        <p style="color:#666; margin-bottom:20px; font-size:15px; line-height:1.5;">
+            Вы уверены, что хотите удалить эту песню?<br>
+            <span id="deleteSongName" style="font-weight:600; color:#dc3545;"></span>
+        </p>
+        <p style="color:#999; font-size:13px; margin-bottom:20px;">Это действие нельзя отменить.</p>
+        <div style="display:flex; gap:10px; justify-content:center;">
+            <button onclick="confirmDelete()" class="btn btn-danger" style="flex:1; padding:12px;">🗑️ Удалить</button>
+            <button onclick="closeDeleteModal()" class="btn btn-outline" style="flex:1; padding:12px;">Отмена</button>
+        </div>
+    </div>
+</div>
+
+<!-- ===== МОДАЛЬНОЕ ОКНО ДЛЯ ПОДТВЕРЖДЕНИЯ МАССОВОГО УДАЛЕНИЯ ===== -->
+<div id="deleteMassModal" style="display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.5); z-index:9999; justify-content:center; align-items:center;">
+    <div style="background:white; padding:35px 40px; border-radius:16px; box-shadow:0 20px 60px rgba(0,0,0,0.3); max-width:420px; width:90%; text-align:center;">
+        <div style="font-size:48px; margin-bottom:10px;">⚠️</div>
+        <h3 style="margin-top:0; margin-bottom:10px; color:#1a1a2e;">Удалить выбранные записи?</h3>
+        <p style="color:#666; margin-bottom:10px; font-size:15px; line-height:1.5;">
+            Вы уверены, что хотите удалить <strong id="massDeleteCount" style="color:#dc3545;"></strong> записей?
+        </p>
+        <p style="color:#999; font-size:13px; margin-bottom:20px;">Это действие нельзя отменить.</p>
+        <div style="display:flex; gap:10px; justify-content:center;">
+            <button onclick="confirmMassDelete()" class="btn btn-danger" style="flex:1; padding:12px;">🗑️ Удалить все</button>
+            <button onclick="closeMassDeleteModal()" class="btn btn-outline" style="flex:1; padding:12px;">Отмена</button>
+        </div>
+    </div>
+</div>
+
+<!-- ===== МОДАЛЬНОЕ ОКНО ДЛЯ РЕЗУЛЬТАТОВ ИМПОРТА ===== -->
+<div id="importResultModal" style="display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.5); z-index:9999; justify-content:center; align-items:center;">
+    <div style="background:white; padding:35px 40px; border-radius:16px; box-shadow:0 20px 60px rgba(0,0,0,0.3); max-width:420px; width:90%; text-align:center;">
+        <div id="importResultIcon" style="font-size:48px; margin-bottom:10px;">✅</div>
+        <h3 id="importResultTitle" style="margin-top:0; margin-bottom:10px; color:#1a1a2e;">Импорт завершён</h3>
+        <p id="importResultText" style="color:#666; margin-bottom:20px; font-size:15px; line-height:1.5;"></p>
+        <button onclick="closeImportResultModal()" class="btn btn-primary" style="padding:12px 40px;">ОК</button>
+    </div>
+</div>
+
 <script>
+    // === Выпадающее меню экспорта ===
+    function toggleDropdown() {
+        var dropdown = document.getElementById('exportDropdown');
+        if (dropdown.style.display === 'block') {
+            dropdown.style.display = 'none';
+        } else {
+            dropdown.style.display = 'block';
+        }
+    }
+    
+    document.addEventListener('click', function(e) {
+        var dropdown = document.getElementById('exportDropdown');
+        if (dropdown && !e.target.closest('.dropdown')) {
+            dropdown.style.display = 'none';
+        }
+    });
+
+    // === Открытие модального окна для ввода страницы ===
+    function goToPage() {
+        var modal = document.getElementById('pageModal');
+        var input = document.getElementById('pageInput');
+        modal.style.display = 'flex';
+        input.focus();
+        input.select();
+    }
+
+    // === Закрытие модального окна страницы ===
+    function closePageModal() {
+        document.getElementById('pageModal').style.display = 'none';
+    }
+
+    // === Переход на страницу из модального окна ===
+    function goToPageSubmit() {
+        var input = document.getElementById('pageInput');
+        var totalPages = {{ total_pages }};
+        var num = parseInt(input.value);
+        
+        if (!isNaN(num) && num >= 1 && num <= totalPages) {
+            var url = '?page=' + num;
+            {% if search %}
+                url += '&search={{ search }}';
+            {% endif %}
+            {% if per_page %}
+                url += '&per_page={{ per_page }}';
+            {% endif %}
+            {% if sort_by %}
+                url += '&sort_by={{ sort_by }}';
+            {% endif %}
+            {% if sort_order %}
+                url += '&sort_order={{ sort_order }}';
+            {% endif %}
+            window.location.href = url;
+        } else {
+            alert('Введите число от 1 до ' + totalPages);
+            input.focus();
+            input.select();
+        }
+    }
+
+    // === ПЕРЕМЕННЫЕ ДЛЯ УДАЛЕНИЯ ===
+    var deleteId = null;
+    var deleteName = '';
+
+    // === Удаление одной записи (с красивым подтверждением) ===
+    function deleteSingle(id, name) {
+        deleteId = id;
+        deleteName = name || 'эту песню';
+        document.getElementById('deleteSongName').textContent = deleteName;
+        document.getElementById('deleteModal').style.display = 'flex';
+    }
+
+    // === Подтверждение удаления одной записи ===
+    function confirmDelete() {
+        if (deleteId === null) return;
+        fetch('/delete/' + deleteId, { method: 'POST' })
+            .then(function(response) {
+                return response.json();
+            })
+            .then(function(data) {
+                if (data.success) {
+                    location.reload();
+                }
+            });
+    }
+
+    // === Закрытие модалки удаления одной записи ===
+    function closeDeleteModal() {
+        document.getElementById('deleteModal').style.display = 'none';
+        deleteId = null;
+    }
+
+    // === Массовое удаление (с красивым подтверждением) ===
+    var massDeleteIds = [];
+
+    function deleteSelected() {
+        var checkboxes = document.querySelectorAll('.row-checkbox:checked');
+        if (checkboxes.length === 0) return;
+        
+        massDeleteIds = [];
+        for (var i = 0; i < checkboxes.length; i++) {
+            massDeleteIds.push(parseInt(checkboxes[i].value));
+        }
+        
+        document.getElementById('massDeleteCount').textContent = massDeleteIds.length;
+        document.getElementById('deleteMassModal').style.display = 'flex';
+    }
+
+    // === Подтверждение массового удаления ===
+    function confirmMassDelete() {
+        if (massDeleteIds.length === 0) return;
+        
+        fetch('/delete_mass', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ ids: massDeleteIds })
+        })
+        .then(function(response) {
+            return response.json();
+        })
+        .then(function(data) {
+            if (data.success) {
+                location.reload();
+            }
+        });
+    }
+
+    // === Закрытие модалки массового удаления ===
+    function closeMassDeleteModal() {
+        document.getElementById('deleteMassModal').style.display = 'none';
+        massDeleteIds = [];
+    }
+
+    // === Импорт файла (с красивым результатом) ===
+    function importFile(input) {
+        if (!input.files || input.files.length === 0) return;
+        var file = input.files[0];
+        var formData = new FormData();
+        formData.append('file', file);
+        
+        var btn = document.getElementById('importFile');
+        btn.disabled = true;
+        btn.textContent = '⏳ Загрузка...';
+        
+        fetch('/import', {
+            method: 'POST',
+            body: formData
+        })
+        .then(function(response) {
+            return response.json();
+        })
+        .then(function(data) {
+            var icon = document.getElementById('importResultIcon');
+            var title = document.getElementById('importResultTitle');
+            var text = document.getElementById('importResultText');
+            
+            if (data.error) {
+                icon.textContent = '❌';
+                title.textContent = 'Ошибка импорта';
+                text.textContent = data.error;
+                title.style.color = '#dc3545';
+            } else {
+                icon.textContent = '✅';
+                title.textContent = 'Импорт завершён!';
+                title.style.color = '#28a745';
+                var msg = 'Добавлено: ' + data.added + ' записей';
+                if (data.errors && data.errors.length) {
+                    msg += '\nОшибок: ' + data.errors.length;
+                }
+                text.textContent = msg;
+                if (data.added > 0) {
+                    setTimeout(function() {
+                        location.reload();
+                    }, 1500);
+                }
+            }
+            document.getElementById('importResultModal').style.display = 'flex';
+        })
+        .catch(function(err) {
+            document.getElementById('importResultIcon').textContent = '❌';
+            document.getElementById('importResultTitle').textContent = 'Ошибка';
+            document.getElementById('importResultTitle').style.color = '#dc3545';
+            document.getElementById('importResultText').textContent = 'Ошибка загрузки: ' + err;
+            document.getElementById('importResultModal').style.display = 'flex';
+        })
+        .finally(function() {
+            btn.disabled = false;
+            btn.textContent = '📥 Импорт';
+            input.value = '';
+        });
+    }
+
+    // === Закрытие модалки результата импорта ===
+    function closeImportResultModal() {
+        document.getElementById('importResultModal').style.display = 'none';
+    }
+
+    // === Закрытие модалок по Esc ===
+    document.addEventListener('keydown', function(e) {
+        if (e.key === 'Escape') {
+            closePageModal();
+            closeDeleteModal();
+            closeMassDeleteModal();
+            closeImportResultModal();
+        }
+        if (e.key === 'Enter') {
+            var modal = document.getElementById('pageModal');
+            if (modal.style.display === 'flex') {
+                goToPageSubmit();
+            }
+        }
+    });
+
+    // === Закрытие модалок по клику вне окна ===
+    document.getElementById('pageModal').addEventListener('click', function(e) {
+        if (e.target === this) closePageModal();
+    });
+    document.getElementById('deleteModal').addEventListener('click', function(e) {
+        if (e.target === this) closeDeleteModal();
+    });
+    document.getElementById('deleteMassModal').addEventListener('click', function(e) {
+        if (e.target === this) closeMassDeleteModal();
+    });
+    document.getElementById('importResultModal').addEventListener('click', function(e) {
+        if (e.target === this) closeImportResultModal();
+    });
+
+    // === Выделение всех ===
+    function toggleAll(master) {
+        var checkboxes = document.querySelectorAll('.row-checkbox');
+        for (var i = 0; i < checkboxes.length; i++) {
+            checkboxes[i].checked = master.checked;
+        }
+        updateSelectedCount();
+    }
+
+    // === Счётчик выбранных ===
+    function updateSelectedCount() {
+        var checkboxes = document.querySelectorAll('.row-checkbox:checked');
+        document.getElementById('selectedCount').textContent = 'Выбрано: ' + checkboxes.length;
+        var deleteBtn = document.getElementById('deleteSelectedBtn');
+        if (checkboxes.length > 0) {
+            deleteBtn.style.display = 'inline-flex';
+        } else {
+            deleteBtn.style.display = 'none';
+        }
+    }
+
+    // === Сохранение сортировки для кнопок per_page ===
     document.querySelectorAll('.btn[href*="per_page"]').forEach(function(el) {
-        let href = el.getAttribute('href');
+        var href = el.getAttribute('href');
         if (href && href.indexOf('sort_by') === -1) {
             href += '&sort_by={{ sort_by }}&sort_order={{ sort_order }}';
             el.setAttribute('href', href);
