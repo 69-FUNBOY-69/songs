@@ -57,12 +57,73 @@
             <span class="action-label">Назад к списку</span>
         </div>
         <div class="action-group">
-            <form method="POST" action="/delete/{{ song.id }}" style="display:inline;" onsubmit="return confirm('Удалить песню?')">
-                <button type="submit" class="btn btn-danger">🗑️</button>
-            </form>
+            <button onclick="deleteSingle({{ song.id }}, '{{ song.song_display_name|escape }}')" class="btn btn-danger">🗑️</button>
             <span class="action-label">Удалить</span>
         </div>
     </div>
 </div>
+
+<!-- ===== МОДАЛЬНОЕ ОКНО ДЛЯ ПОДТВЕРЖДЕНИЯ УДАЛЕНИЯ ===== -->
+<div id="deleteModal" style="display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.5); z-index:9999; justify-content:center; align-items:center;">
+    <div style="background:white; padding:35px 40px; border-radius:16px; box-shadow:0 20px 60px rgba(0,0,0,0.3); max-width:420px; width:90%; text-align:center;">
+        <div style="font-size:48px; margin-bottom:10px;">🗑️</div>
+        <h3 style="margin-top:0; margin-bottom:10px; color:#1a1a2e;">Удалить запись?</h3>
+        <p style="color:#666; margin-bottom:20px; font-size:15px; line-height:1.5;">
+            Вы уверены, что хотите удалить эту песню?<br>
+            <span id="deleteSongName" style="font-weight:600; color:#dc3545;"></span>
+        </p>
+        <p style="color:#999; font-size:13px; margin-bottom:20px;">Это действие нельзя отменить.</p>
+        <div style="display:flex; gap:10px; justify-content:center;">
+            <button onclick="confirmDelete()" class="btn btn-danger" style="flex:1; padding:12px;">🗑️ Удалить</button>
+            <button onclick="closeDeleteModal()" class="btn btn-outline" style="flex:1; padding:12px;">Отмена</button>
+        </div>
+    </div>
+</div>
+
+<script>
+    // === ПЕРЕМЕННЫЕ ДЛЯ УДАЛЕНИЯ ===
+    var deleteId = null;
+    var deleteName = '';
+
+    // === Удаление одной записи (с красивым подтверждением) ===
+    function deleteSingle(id, name) {
+        deleteId = id;
+        deleteName = name || 'эту песню';
+        document.getElementById('deleteSongName').textContent = deleteName;
+        document.getElementById('deleteModal').style.display = 'flex';
+    }
+
+    // === Подтверждение удаления ===
+    function confirmDelete() {
+        if (deleteId === null) return;
+        fetch('/delete/' + deleteId, { method: 'POST' })
+            .then(function(response) {
+                return response.json();
+            })
+            .then(function(data) {
+                if (data.success) {
+                    window.location.href = '/';
+                }
+            });
+    }
+
+    // === Закрытие модалки ===
+    function closeDeleteModal() {
+        document.getElementById('deleteModal').style.display = 'none';
+        deleteId = null;
+    }
+
+    // === Закрытие по Esc ===
+    document.addEventListener('keydown', function(e) {
+        if (e.key === 'Escape') {
+            closeDeleteModal();
+        }
+    });
+
+    // === Закрытие по клику вне окна ===
+    document.getElementById('deleteModal').addEventListener('click', function(e) {
+        if (e.target === this) closeDeleteModal();
+    });
+</script>
 </body>
 </html>
