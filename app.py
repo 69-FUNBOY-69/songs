@@ -1,20 +1,22 @@
-from flask import Flask, render_template, request, redirect, url_for
+from flask import Flask, render_template, request, redirect, url_for, jsonify, send_file
 from flask_sqlalchemy import SQLAlchemy
 from dotenv import load_dotenv
 from sqlalchemy import text, inspect
 import os
+import csv
+import io
+import pandas as pd
+from werkzeug.utils import secure_filename
 
 load_dotenv()
 
 app = Flask(__name__)
 app.config['SECRET_KEY'] = os.getenv('SECRET_KEY', 'secret-key-123')
+app.config['MAX_CONTENT_LENGTH'] = 16 * 1024 * 1024
 
 database_url = os.getenv('DATABASE_URL')
 if database_url:
-    if '?' in database_url:
-        app.config['SQLALCHEMY_DATABASE_URI'] = database_url + '&sslmode=require'
-    else:
-        app.config['SQLALCHEMY_DATABASE_URI'] = database_url + '?sslmode=require'
+    app.config['SQLALCHEMY_DATABASE_URI'] = database_url
 else:
     app.config['SQLALCHEMY_DATABASE_URI'] = (
         f"postgresql://postgres:102030@localhost:5432/songs"
@@ -37,8 +39,17 @@ class Song(db.Model):
     artist_text = db.Column(db.String(500))
     phonogram_manufacturer = db.Column(db.String(500))
 
-    def __repr__(self):
-        return f'<Song {self.song_display_name}>'
+    def to_dict(self):
+        return {
+            'id': self.id,
+            'song_display_name': self.song_display_name,
+            'track_duration': self.track_duration,
+            'music_author': self.music_author,
+            'lyrics_author': self.lyrics_author,
+            'genre': self.genre,
+            'artist_text': self.artist_text,
+            'phonogram_manufacturer': self.phonogram_manufacturer
+        }
 
 
 with app.app_context():
@@ -150,7 +161,16 @@ def delete_song(id):
     song = Song.query.get_or_404(id)
     db.session.delete(song)
     db.session.commit()
-    return redirect(url_for('index'))
+    return jsonify({'success': True})
+
+
+@app.route('/delete_mass', methods=['POST'])
+def delete_mass():
+    ids = request.json.get('ids', [])
+    if ids:
+        Song.query.filter(Song.id.in_(ids)).delete(synchronize_session=False)
+        db.session.commit()
+    return jsonify({'success': True, 'deleted': len(ids)})
 
 
 @app.route('/fix_names', methods=['GET', 'POST'])
@@ -220,6 +240,144 @@ def fix_names():
         </body>
     </html>
     """
+
+
+@app.route('/export')
+def export():
+    format_type = request.args.get('format', 'csv')
+    songs = Song.query.all()
+    data = [song.to_dict() for song in songs]
+    
+    if format_type == 'csv':
+        output = io.StringIO()
+        writer = csv.DictWriter(output, fieldnames=data[0].keys() if data else [])
+        writer.writeheader()
+        writer.writerows(data)
+        return send_file(
+            io.BytesIO(output.getvalue().encode('utf-8-sig')),
+            mimetype='text/csv',
+            as_attachment=True,
+            download_name='songs_export.csv'
+        )
+    elif format_type == 'xlsx':
+        df = pd.DataFrame(data)
+        output = io.BytesIO()
+        with pd.ExcelWriter(output, engine='openpyxl') as writer:
+            df.to_excel(writer, index=False, sheet_name='Songs')
+        output.seek(0)
+        return send_file(
+            output,
+            mimetype='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+            as_attachment=True,
+            download_name='songs_export.xlsx'
+        )
+    elif format_type == 'txt':
+        output = io.StringIO()
+        for song in songs:
+            output.write(f"{song.id}|{song.song_display_name}|{song.track_duration}|{song.music_author}|{song.lyrics_author}|{song.genre}|{song.artist_text}|{song.phonogram_manufacturer}\n")
+        return send_file(
+            io.BytesIO(output.getvalue().encode('utf-8-sig')),
+            mimetype='text/plain',
+            as_attachment=True,
+            download_name='songs_export.txt'
+        )
+    return redirect(url_for('index'))
+
+
+@app.route('/import', methods=['POST'])
+def import_file():
+    if 'file' not in request.files:
+        return jsonify({'error': 'No file uploaded'}), 400
+    
+    file = request.files['file']
+    if file.filename == '':
+        return jsonify({'error': 'No file selected'}), 400
+    
+    filename = secure_filename(file.filename)
+    ext = filename.rsplit('.', 1)[1].lower() if '.' in filename else ''
+    
+    songs_added = 0
+    errors = []
+    
+    try:
+        if ext == 'csv':
+            content = file.read().decode('utf-8-sig')
+            reader = csv.DictReader(io.StringIO(content))
+            for row in reader:
+                try:
+                    artist = row.get('artist_text', '').strip()
+                    track = row.get('track_duration', '').strip()
+                    song = Song(
+                        song_display_name=f"{artist} - {track}" if artist and track else track or artist or '',
+                        track_duration=track,
+                        music_author=row.get('music_author', '').strip(),
+                        lyrics_author=row.get('lyrics_author', '').strip(),
+                        genre=row.get('genre', 'CHR').strip(),
+                        artist_text=artist,
+                        phonogram_manufacturer=row.get('phonogram_manufacturer', '').strip()
+                    )
+                    db.session.add(song)
+                    songs_added += 1
+                except Exception as e:
+                    errors.append(str(e))
+            db.session.commit()
+            
+        elif ext in ['xlsx', 'xls']:
+            df = pd.read_excel(file)
+            for _, row in df.iterrows():
+                try:
+                    artist = str(row.get('artist_text', '')).strip()
+                    track = str(row.get('track_duration', '')).strip()
+                    song = Song(
+                        song_display_name=f"{artist} - {track}" if artist and track else track or artist or '',
+                        track_duration=track,
+                        music_author=str(row.get('music_author', '')).strip(),
+                        lyrics_author=str(row.get('lyrics_author', '')).strip(),
+                        genre=str(row.get('genre', 'CHR')).strip(),
+                        artist_text=artist,
+                        phonogram_manufacturer=str(row.get('phonogram_manufacturer', '')).strip()
+                    )
+                    db.session.add(song)
+                    songs_added += 1
+                except Exception as e:
+                    errors.append(str(e))
+            db.session.commit()
+            
+        elif ext == 'txt':
+            content = file.read().decode('utf-8-sig')
+            for line in content.strip().split('\n'):
+                if not line.strip():
+                    continue
+                parts = line.strip().split('|')
+                if len(parts) >= 8:
+                    try:
+                        artist = parts[6].strip()
+                        track = parts[2].strip()
+                        song = Song(
+                            song_display_name=f"{artist} - {track}" if artist and track else track or artist or '',
+                            track_duration=track,
+                            music_author=parts[3].strip(),
+                            lyrics_author=parts[4].strip(),
+                            genre=parts[5].strip(),
+                            artist_text=artist,
+                            phonogram_manufacturer=parts[7].strip()
+                        )
+                        db.session.add(song)
+                        songs_added += 1
+                    except Exception as e:
+                        errors.append(str(e))
+            db.session.commit()
+        else:
+            return jsonify({'error': f'Unsupported file format: {ext}'}), 400
+            
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+    
+    return jsonify({
+        'success': True,
+        'added': songs_added,
+        'errors': errors
+    })
 
 
 @app.route('/health')
