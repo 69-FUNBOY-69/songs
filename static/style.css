@@ -21,7 +21,6 @@ html, body {
     border-radius: 0;
     box-shadow: none;
     border: none;
-    min-height: 100vh;
 }
 
 h1 {
@@ -189,8 +188,7 @@ h1 .subtitle {
 }
 
 .table-wrapper {
-    overflow-x: auto;
-    overflow-y: visible;
+    overflow: visible;
     border-radius: 0;
     border: 1px solid #e9ecef;
     background: white;
@@ -198,49 +196,14 @@ h1 .subtitle {
 }
 
 .table-scroll {
-    overflow-x: auto;
-    overflow-y: visible;
-    -webkit-overflow-scrolling: touch;
-}
-
-.table-scroll-bottom {
-    overflow: hidden;
-    height: 16px;
-    margin: 0;
-    padding: 0;
-}
-
-.table-scroll-bottom .scroll-helper {
-    overflow-x: auto;
-    overflow-y: hidden;
-    height: 20px;
-    margin: 0;
-    padding: 0;
-}
-
-.table-scroll-bottom .scroll-helper::-webkit-scrollbar {
-    height: 12px;
-}
-
-.table-scroll-bottom .scroll-helper::-webkit-scrollbar-track {
-    background: #f1f1f1;
-    border-radius: 6px;
-}
-
-.table-scroll-bottom .scroll-helper::-webkit-scrollbar-thumb {
-    background: #c1c1c1;
-    border-radius: 6px;
-}
-
-.table-scroll-bottom .scroll-helper::-webkit-scrollbar-thumb:hover {
-    background: #a8a8a8;
+    overflow: visible;
 }
 
 table {
     width: 100%;
     border-collapse: collapse;
     font-size: 13px;
-    min-width: 1100px;
+    table-layout: fixed;
 }
 
 thead th {
@@ -273,6 +236,8 @@ tbody td {
     padding: 10px 10px;
     border-bottom: 1px solid #f0f0f0;
     vertical-align: middle;
+    word-wrap: break-word;
+    overflow-wrap: break-word;
 }
 
 tbody tr:hover {
@@ -294,7 +259,7 @@ tbody tr:last-child td {
 }
 
 .truncate {
-    max-width: 180px;
+    max-width: 100%;
     overflow: hidden;
     text-overflow: ellipsis;
     white-space: nowrap;
@@ -333,6 +298,13 @@ tbody tr:last-child td {
 .pagination .dots {
     padding: 8px 10px;
     color: #999;
+    cursor: pointer;
+    border-radius: 8px;
+    transition: background 0.2s;
+}
+
+.pagination .dots:hover {
+    background: #e9ecef;
 }
 
 .empty {
@@ -419,6 +391,18 @@ tbody tr:last-child td {
     white-space: pre-wrap;
 }
 
+/* Ширина колонок */
+th:nth-child(1), td:nth-child(1) { width: 40px; }  /* Чекбокс */
+th:nth-child(2), td:nth-child(2) { width: 60px; }  /* ID */
+th:nth-child(3), td:nth-child(3) { width: 15%; }   /* Название произведения */
+th:nth-child(4), td:nth-child(4) { width: 12%; }   /* Название фонограммы */
+th:nth-child(5), td:nth-child(5) { width: 10%; }   /* Автор музыки */
+th:nth-child(6), td:nth-child(6) { width: 10%; }   /* Автор текста */
+th:nth-child(7), td:nth-child(7) { width: 60px; }  /* Жанр */
+th:nth-child(8), td:nth-child(8) { width: 12%; }   /* Исполнитель */
+th:nth-child(9), td:nth-child(9) { width: 12%; }   /* Изготовитель */
+th:nth-child(10), td:nth-child(10) { width: 180px; } /* Действия */
+
 @media (max-width: 768px) {
     .container {
         padding: 15px;
@@ -435,20 +419,6 @@ tbody tr:last-child td {
 
     .search-form input {
         width: 100%;
-    }
-
-    .truncate {
-        max-width: 100px;
-    }
-
-    table {
-        font-size: 12px;
-        min-width: 900px;
-    }
-
-    thead th,
-    tbody td {
-        padding: 6px 4px;
     }
 
     .btn {
@@ -470,6 +440,11 @@ tbody tr:last-child td {
     .song-card .field .value {
         font-size: 14px;
     }
+    
+    th:nth-child(3), td:nth-child(3) { width: 12%; }
+    th:nth-child(4), td:nth-child(4) { width: 10%; }
+    th:nth-child(8), td:nth-child(8) { width: 10%; }
+    th:nth-child(9), td:nth-child(9) { width: 10%; }
 }
 
 @media (max-width: 480px) {
@@ -511,11 +486,6 @@ tbody tr:last-child td {
 
     .song-card .field .value {
         font-size: 13px;
-    }
-
-    .table-scroll-top,
-    .table-scroll-bottom {
-        height: 12px;
     }
 }
 
