@@ -21,6 +21,7 @@ html, body {
     border-radius: 0;
     box-shadow: none;
     border: none;
+    animation: fadeIn 0.3s ease-in-out;
 }
 
 h1 {
@@ -142,6 +143,20 @@ h1 .subtitle {
     min-height: 28px;
 }
 
+.btn-sm.btn-primary {
+    background: #4a90d9;
+    color: white;
+}
+
+.btn-sm.btn-outline {
+    background: #e9ecef;
+    color: #333;
+}
+
+.btn-sm.btn-outline:hover {
+    background: #dee2e6;
+}
+
 .actions {
     display: flex;
     gap: 12px;
@@ -222,10 +237,12 @@ thead th {
 thead th a.sort-link {
     color: #495057;
     text-decoration: none;
-    display: flex;
+    display: inline-flex;
     align-items: center;
     gap: 4px;
     transition: color 0.2s;
+    font-size: 13px;
+    white-space: nowrap;
 }
 
 thead th a.sort-link:hover {
@@ -391,17 +408,16 @@ tbody tr:last-child td {
     white-space: pre-wrap;
 }
 
-/* Ширина колонок */
-th:nth-child(1), td:nth-child(1) { width: 40px; }  /* Чекбокс */
-th:nth-child(2), td:nth-child(2) { width: 60px; }  /* ID */
-th:nth-child(3), td:nth-child(3) { width: 15%; }   /* Название произведения */
-th:nth-child(4), td:nth-child(4) { width: 12%; }   /* Название фонограммы */
-th:nth-child(5), td:nth-child(5) { width: 10%; }   /* Автор музыки */
-th:nth-child(6), td:nth-child(6) { width: 10%; }   /* Автор текста */
-th:nth-child(7), td:nth-child(7) { width: 60px; }  /* Жанр */
-th:nth-child(8), td:nth-child(8) { width: 12%; }   /* Исполнитель */
-th:nth-child(9), td:nth-child(9) { width: 12%; }   /* Изготовитель */
-th:nth-child(10), td:nth-child(10) { width: 180px; } /* Действия */
+th:nth-child(1), td:nth-child(1) { width: 40px; min-width: 40px; max-width: 40px; }
+th:nth-child(2), td:nth-child(2) { width: 60px; min-width: 60px; max-width: 60px; }
+th:nth-child(3), td:nth-child(3) { width: 17%; min-width: 160px; }
+th:nth-child(4), td:nth-child(4) { width: 15%; min-width: 145px; }
+th:nth-child(5), td:nth-child(5) { width: 11%; min-width: 115px; }
+th:nth-child(6), td:nth-child(6) { width: 11%; min-width: 115px; }
+th:nth-child(7), td:nth-child(7) { width: 60px; min-width: 60px; max-width: 60px; }
+th:nth-child(8), td:nth-child(8) { width: 13%; min-width: 130px; }
+th:nth-child(9), td:nth-child(9) { width: 13%; min-width: 130px; }
+th:nth-child(10), td:nth-child(10) { width: 180px; min-width: 180px; max-width: 180px; }
 
 @media (max-width: 768px) {
     .container {
@@ -441,10 +457,10 @@ th:nth-child(10), td:nth-child(10) { width: 180px; } /* Действия */
         font-size: 14px;
     }
     
-    th:nth-child(3), td:nth-child(3) { width: 12%; }
-    th:nth-child(4), td:nth-child(4) { width: 10%; }
-    th:nth-child(8), td:nth-child(8) { width: 10%; }
-    th:nth-child(9), td:nth-child(9) { width: 10%; }
+    th:nth-child(3), td:nth-child(3) { width: 12%; min-width: 100px; }
+    th:nth-child(4), td:nth-child(4) { width: 10%; min-width: 90px; }
+    th:nth-child(8), td:nth-child(8) { width: 10%; min-width: 90px; }
+    th:nth-child(9), td:nth-child(9) { width: 10%; min-width: 90px; }
 }
 
 @media (max-width: 480px) {
@@ -494,10 +510,6 @@ th:nth-child(10), td:nth-child(10) { width: 180px; } /* Действия */
     to { opacity: 1; transform: translateY(0); }
 }
 
-.container {
-    animation: fadeIn 0.3s ease-in-out;
-}
-
 [title] {
     position: relative;
 }
@@ -518,18 +530,4 @@ th:nth-child(10), td:nth-child(10) { width: 180px; } /* Действия */
     overflow: hidden;
     text-overflow: ellipsis;
     box-shadow: 0 4px 15px rgba(0,0,0,0.2);
-}
-
-.btn-sm.btn-primary {
-    background: #4a90d9;
-    color: white;
-}
-
-.btn-sm.btn-outline {
-    background: #e9ecef;
-    color: #333;
-}
-
-.btn-sm.btn-outline:hover {
-    background: #dee2e6;
 }
