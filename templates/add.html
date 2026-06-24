@@ -15,6 +15,11 @@
     </div>
 
     <form method="POST" action="/add">
+        <input type="hidden" name="page" value="{{ page }}">
+        <input type="hidden" name="search" value="{{ search }}">
+        <input type="hidden" name="per_page" value="{{ per_page }}">
+        <input type="hidden" name="sort_by" value="{{ sort_by }}">
+        <input type="hidden" name="sort_order" value="{{ sort_order }}">
 
         <div class="form-group">
             <label>Исполнитель (ФИО или название коллектива) <span class="required">*</span></label>
@@ -59,7 +64,7 @@
 
         <div style="display:flex; gap:10px; flex-wrap:wrap; margin-top:10px;">
             <button type="submit" class="btn btn-success">💾 Сохранить</button>
-            <a href="/" class="btn btn-outline">← Назад</a>
+            <a href="/?page={{ page }}{% if search %}&search={{ search }}{% endif %}{% if per_page %}&per_page={{ per_page }}{% endif %}{% if sort_by %}&sort_by={{ sort_by }}{% endif %}{% if sort_order %}&sort_order={{ sort_order }}{% endif %}" class="btn btn-outline">← Назад</a>
         </div>
     </form>
 </div>
