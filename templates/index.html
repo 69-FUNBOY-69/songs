@@ -33,9 +33,9 @@
             <div class="dropdown" style="position:relative; display:inline-block;">
                 <button class="btn btn-outline" onclick="toggleDropdown()">📤 Экспорт</button>
                 <div id="exportDropdown" style="display:none; position:absolute; background:white; border:1px solid #ddd; border-radius:8px; padding:5px 0; z-index:100; min-width:120px; box-shadow:0 4px 12px rgba(0,0,0,0.1);">
-                    <a href="#" onclick="exportFormat('csv')" class="btn" style="display:block; background:none; box-shadow:none; border-radius:0; padding:8px 16px; text-align:left; width:100%;">📄 CSV</a>
-                    <a href="#" onclick="exportFormat('xlsx')" class="btn" style="display:block; background:none; box-shadow:none; border-radius:0; padding:8px 16px; text-align:left; width:100%;">📊 XLSX</a>
-                    <a href="#" onclick="exportFormat('txt')" class="btn" style="display:block; background:none; box-shadow:none; border-radius:0; padding:8px 16px; text-align:left; width:100%;">📃 TXT</a>
+                    <a href="javascript:void(0)" onclick="exportFormat('csv')" class="btn" style="display:block; background:none; box-shadow:none; border-radius:0; padding:8px 16px; text-align:left; width:100%;">📄 CSV</a>
+                    <a href="javascript:void(0)" onclick="exportFormat('xlsx')" class="btn" style="display:block; background:none; box-shadow:none; border-radius:0; padding:8px 16px; text-align:left; width:100%;">📊 XLSX</a>
+                    <a href="javascript:void(0)" onclick="exportFormat('txt')" class="btn" style="display:block; background:none; box-shadow:none; border-radius:0; padding:8px 16px; text-align:left; width:100%;">📃 TXT</a>
                 </div>
             </div>
             
@@ -269,6 +269,7 @@
 </div>
 
 <script>
+    // === Выпадающее меню экспорта ===
     function toggleDropdown() {
         var dropdown = document.getElementById('exportDropdown');
         if (dropdown.style.display === 'block') {
@@ -285,6 +286,7 @@
         }
     });
 
+    // === Открытие модального окна для ввода страницы ===
     function goToPage() {
         var modal = document.getElementById('pageModal');
         var input = document.getElementById('pageInput');
@@ -293,10 +295,12 @@
         input.select();
     }
 
+    // === Закрытие модального окна страницы ===
     function closePageModal() {
         document.getElementById('pageModal').style.display = 'none';
     }
 
+    // === Переход на страницу из модального окна ===
     function goToPageSubmit() {
         var input = document.getElementById('pageInput');
         var totalPages = {{ total_pages }};
@@ -322,14 +326,18 @@
             input.focus();
             input.select();
         }
+    }
 
+    // === ПЕРЕМЕННЫЕ ДЛЯ УДАЛЕНИЯ ===
     var deleteId = null;
 
+    // === Удаление одной записи (с красивым подтверждением) ===
     function deleteSingle(id) {
         deleteId = id;
         document.getElementById('deleteModal').style.display = 'flex';
     }
 
+    // === Подтверждение удаления одной записи ===
     function confirmDelete() {
         if (deleteId === null) return;
         fetch('/delete/' + deleteId, { method: 'POST' })
@@ -343,11 +351,13 @@
             });
     }
 
+    // === Закрытие модалки удаления одной записи ===
     function closeDeleteModal() {
         document.getElementById('deleteModal').style.display = 'none';
         deleteId = null;
     }
 
+    // === Массовое удаление (с красивым подтверждением) ===
     var massDeleteIds = [];
 
     function deleteSelected() {
@@ -382,11 +392,13 @@
         });
     }
 
+    // === Закрытие модалки массового удаления ===
     function closeMassDeleteModal() {
         document.getElementById('deleteMassModal').style.display = 'none';
         massDeleteIds = [];
     }
 
+    // === Импорт файла (с красивым результатом) ===
     function importFile(input) {
         if (!input.files || input.files.length === 0) return;
         var file = input.files[0];
@@ -445,10 +457,12 @@
         });
     }
 
+    // === Закрытие модалки результата импорта ===
     function closeImportResultModal() {
         document.getElementById('importResultModal').style.display = 'none';
     }
 
+    // === Экспорт в выбранном формате ===
     function exportFormat(format) {
         var checkboxes = document.querySelectorAll('.row-checkbox:checked');
         var ids = [];
@@ -469,10 +483,10 @@
         }
         
         window.location.href = url;
-        
         document.getElementById('exportDropdown').style.display = 'none';
     }
 
+    // === Закрытие модалок по Esc ===
     document.addEventListener('keydown', function(e) {
         if (e.key === 'Escape') {
             closePageModal();
@@ -488,6 +502,7 @@
         }
     });
 
+    // === Закрытие модалок по клику вне окна ===
     document.getElementById('pageModal').addEventListener('click', function(e) {
         if (e.target === this) closePageModal();
     });
@@ -501,6 +516,7 @@
         if (e.target === this) closeImportResultModal();
     });
 
+    // === Выделение всех ===
     function toggleAll(master) {
         var checkboxes = document.querySelectorAll('.row-checkbox');
         for (var i = 0; i < checkboxes.length; i++) {
@@ -509,6 +525,7 @@
         updateSelectedCount();
     }
 
+    // === Счётчик выбранных ===
     function updateSelectedCount() {
         var checkboxes = document.querySelectorAll('.row-checkbox:checked');
         document.getElementById('selectedCount').textContent = 'Выбрано: ' + checkboxes.length;
@@ -520,6 +537,7 @@
         }
     }
 
+    // === Сохранение сортировки для кнопок per_page ===
     document.querySelectorAll('.btn[href*="per_page"]').forEach(function(el) {
         var href = el.getAttribute('href');
         if (href && href.indexOf('sort_by') === -1) {
