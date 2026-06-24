@@ -19,7 +19,8 @@ if database_url:
     app.config['SQLALCHEMY_DATABASE_URI'] = database_url
 else:
     app.config['SQLALCHEMY_DATABASE_URI'] = (
-        f"postgresql://postgres:102030@localhost:5432/songs"
+        f"postgresql://{os.getenv('DB_USER')}:{os.getenv('DB_PASSWORD')}"
+        f"@{os.getenv('DB_HOST')}:{os.getenv('DB_PORT')}/{os.getenv('DB_NAME')}"
     )
 
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
@@ -107,11 +108,22 @@ def index():
 @app.route('/song/<int:id>')
 def view_song(id):
     song = Song.query.get_or_404(id)
-    return render_template('song.html', song=song)
+    page = request.args.get('page', 1, type=int)
+    search = request.args.get('search', '', type=str)
+    per_page = request.args.get('per_page', 50, type=int)
+    sort_by = request.args.get('sort_by', 'id', type=str)
+    sort_order = request.args.get('sort_order', 'asc', type=str)
+    return render_template('song.html', song=song, page=page, search=search, per_page=per_page, sort_by=sort_by, sort_order=sort_order)
 
 
 @app.route('/add', methods=['GET', 'POST'])
 def add_song():
+    page = request.args.get('page', 1, type=int)
+    search = request.args.get('search', '', type=str)
+    per_page = request.args.get('per_page', 50, type=int)
+    sort_by = request.args.get('sort_by', 'id', type=str)
+    sort_order = request.args.get('sort_order', 'asc', type=str)
+
     if request.method == 'POST':
         artist = request.form.get('artist_text', '')
         track = request.form.get('track_duration', '')
@@ -128,14 +140,19 @@ def add_song():
         )
         db.session.add(song)
         db.session.commit()
-        return redirect(url_for('index'))
+        return redirect(url_for('index', page=page, search=search, per_page=per_page, sort_by=sort_by, sort_order=sort_order))
 
-    return render_template('add.html')
+    return render_template('add.html', page=page, search=search, per_page=per_page, sort_by=sort_by, sort_order=sort_order)
 
 
 @app.route('/edit/<int:id>', methods=['GET', 'POST'])
 def edit_song(id):
     song = Song.query.get_or_404(id)
+    page = request.args.get('page', 1, type=int)
+    search = request.args.get('search', '', type=str)
+    per_page = request.args.get('per_page', 50, type=int)
+    sort_by = request.args.get('sort_by', 'id', type=str)
+    sort_order = request.args.get('sort_order', 'asc', type=str)
 
     if request.method == 'POST':
         artist = request.form.get('artist_text', '')
@@ -151,9 +168,9 @@ def edit_song(id):
         song.phonogram_manufacturer = request.form.get('phonogram_manufacturer', '')
 
         db.session.commit()
-        return redirect(url_for('index'))
+        return redirect(url_for('index', page=page, search=search, per_page=per_page, sort_by=sort_by, sort_order=sort_order))
 
-    return render_template('edit.html', song=song)
+    return render_template('edit.html', song=song, page=page, search=search, per_page=per_page, sort_by=sort_by, sort_order=sort_order)
 
 
 @app.route('/delete/<int:id>', methods=['POST'])
@@ -245,9 +262,50 @@ def fix_names():
 @app.route('/export')
 def export():
     format_type = request.args.get('format', 'csv')
-    songs = Song.query.all()
-    data = [song.to_dict() for song in songs]
-    
+    ids_param = request.args.get('ids', '')
+    page = request.args.get('page', 1, type=int)
+    search = request.args.get('search', '', type=str)
+    per_page = request.args.get('per_page', 50, type=int)
+    sort_by = request.args.get('sort_by', 'id', type=str)
+    sort_order = request.args.get('sort_order', 'asc', type=str)
+
+    allowed_sort_fields = ['id', 'song_display_name', 'track_duration', 'music_author', 'lyrics_author', 'artist_text', 'phonogram_manufacturer']
+
+    if ids_param:
+        ids = [int(x) for x in ids_param.split(',') if x]
+        songs = Song.query.filter(Song.id.in_(ids)).all()
+    else:
+        query = Song.query
+        if search:
+            search_pattern = f'%{search}%'
+            query = query.filter(
+                db.or_(
+                    Song.song_display_name.ilike(search_pattern),
+                    Song.artist_text.ilike(search_pattern),
+                    Song.music_author.ilike(search_pattern),
+                    Song.lyrics_author.ilike(search_pattern)
+                )
+            )
+        if sort_by in allowed_sort_fields:
+            if sort_order == 'asc':
+                query = query.order_by(getattr(Song, sort_by).asc())
+            else:
+                query = query.order_by(getattr(Song, sort_by).desc())
+        songs = query.all()
+
+    data = []
+    for idx, song in enumerate(songs, 1):
+        data.append({
+            'ID': idx,
+            'Название произведения': song.song_display_name or '',
+            'Название фонограммы': song.track_duration or '',
+            'Автор музыки': song.music_author or '',
+            'Автор текста': song.lyrics_author or '',
+            'Жанр': song.genre or '',
+            'Исполнитель': song.artist_text or '',
+            'Изготовитель фонограммы': song.phonogram_manufacturer or ''
+        })
+
     if format_type == 'csv':
         output = io.StringIO()
         writer = csv.DictWriter(output, fieldnames=data[0].keys() if data else [])
@@ -264,6 +322,24 @@ def export():
         output = io.BytesIO()
         with pd.ExcelWriter(output, engine='openpyxl') as writer:
             df.to_excel(writer, index=False, sheet_name='Songs')
+            worksheet = writer.sheets['Songs']
+            
+            for column in worksheet.columns:
+                max_length = 0
+                column_letter = column[0].column_letter
+                for cell in column:
+                    try:
+                        if cell.value and len(str(cell.value)) > max_length:
+                            max_length = len(str(cell.value))
+                    except:
+                        pass
+                adjusted_width = min(max_length + 4, 80)
+                worksheet.column_dimensions[column_letter].width = adjusted_width
+                    
+            for row in worksheet.iter_rows():
+                for cell in row:
+                    cell.alignment = cell.alignment.copy(wrap_text=True)
+        
         output.seek(0)
         return send_file(
             output,
@@ -273,15 +349,31 @@ def export():
         )
     elif format_type == 'txt':
         output = io.StringIO()
-        for song in songs:
-            output.write(f"{song.id}|{song.song_display_name}|{song.track_duration}|{song.music_author}|{song.lyrics_author}|{song.genre}|{song.artist_text}|{song.phonogram_manufacturer}\n")
+        output.write("=" * 80 + "\n")
+        output.write(" " * 30 + "ЭКСПОРТ БАЗЫ ПЕСЕН\n")
+        output.write("=" * 80 + "\n\n")
+        
+        for idx, row in enumerate(data, 1):
+            output.write(f"Запись #{idx}\n")
+            output.write("-" * 80 + "\n")
+            for key, value in row.items():
+                if value:
+                    output.write(f"{key:25} : {value}\n")
+                else:
+                    output.write(f"{key:25} : (не указано)\n")
+            output.write("\n")
+        
+        output.write("=" * 80 + "\n")
+        output.write(f"Всего записей: {len(data)}\n")
+        output.write("=" * 80 + "\n")
+        
         return send_file(
             io.BytesIO(output.getvalue().encode('utf-8-sig')),
             mimetype='text/plain',
             as_attachment=True,
             download_name='songs_export.txt'
         )
-    return redirect(url_for('index'))
+    return redirect(url_for('index', page=page, search=search, per_page=per_page, sort_by=sort_by, sort_order=sort_order))
 
 
 @app.route('/import', methods=['POST'])
@@ -305,16 +397,16 @@ def import_file():
             reader = csv.DictReader(io.StringIO(content))
             for row in reader:
                 try:
-                    artist = row.get('artist_text', '').strip()
-                    track = row.get('track_duration', '').strip()
+                    artist = row.get('Исполнитель', '').strip() or row.get('artist_text', '').strip()
+                    track = row.get('Название фонограммы', '').strip() or row.get('track_duration', '').strip()
                     song = Song(
                         song_display_name=f"{artist} - {track}" if artist and track else track or artist or '',
                         track_duration=track,
-                        music_author=row.get('music_author', '').strip(),
-                        lyrics_author=row.get('lyrics_author', '').strip(),
-                        genre=row.get('genre', 'CHR').strip(),
+                        music_author=row.get('Автор музыки', '').strip() or row.get('music_author', '').strip(),
+                        lyrics_author=row.get('Автор текста', '').strip() or row.get('lyrics_author', '').strip(),
+                        genre=row.get('Жанр', 'CHR').strip() or row.get('genre', 'CHR').strip(),
                         artist_text=artist,
-                        phonogram_manufacturer=row.get('phonogram_manufacturer', '').strip()
+                        phonogram_manufacturer=row.get('Изготовитель фонограммы', '').strip() or row.get('phonogram_manufacturer', '').strip()
                     )
                     db.session.add(song)
                     songs_added += 1
@@ -326,16 +418,16 @@ def import_file():
             df = pd.read_excel(file)
             for _, row in df.iterrows():
                 try:
-                    artist = str(row.get('artist_text', '')).strip()
-                    track = str(row.get('track_duration', '')).strip()
+                    artist = str(row.get('Исполнитель', '')).strip() or str(row.get('artist_text', '')).strip()
+                    track = str(row.get('Название фонограммы', '')).strip() or str(row.get('track_duration', '')).strip()
                     song = Song(
                         song_display_name=f"{artist} - {track}" if artist and track else track or artist or '',
                         track_duration=track,
-                        music_author=str(row.get('music_author', '')).strip(),
-                        lyrics_author=str(row.get('lyrics_author', '')).strip(),
-                        genre=str(row.get('genre', 'CHR')).strip(),
+                        music_author=str(row.get('Автор музыки', '')).strip() or str(row.get('music_author', '')).strip(),
+                        lyrics_author=str(row.get('Автор текста', '')).strip() or str(row.get('lyrics_author', '')).strip(),
+                        genre=str(row.get('Жанр', 'CHR')).strip() or str(row.get('genre', 'CHR')).strip(),
                         artist_text=artist,
-                        phonogram_manufacturer=str(row.get('phonogram_manufacturer', '')).strip()
+                        phonogram_manufacturer=str(row.get('Изготовитель фонограммы', '')).strip() or str(row.get('phonogram_manufacturer', '')).strip()
                     )
                     db.session.add(song)
                     songs_added += 1
@@ -345,27 +437,53 @@ def import_file():
             
         elif ext == 'txt':
             content = file.read().decode('utf-8-sig')
-            for line in content.strip().split('\n'):
-                if not line.strip():
-                    continue
-                parts = line.strip().split('|')
-                if len(parts) >= 8:
-                    try:
-                        artist = parts[6].strip()
-                        track = parts[2].strip()
-                        song = Song(
-                            song_display_name=f"{artist} - {track}" if artist and track else track or artist or '',
-                            track_duration=track,
-                            music_author=parts[3].strip(),
-                            lyrics_author=parts[4].strip(),
-                            genre=parts[5].strip(),
-                            artist_text=artist,
-                            phonogram_manufacturer=parts[7].strip()
-                        )
-                        db.session.add(song)
-                        songs_added += 1
-                    except Exception as e:
-                        errors.append(str(e))
+            lines = content.strip().split('\n')
+            if lines:
+                for line in lines:
+                    if not line.strip():
+                        continue
+                    if line.startswith('=') or line.startswith('ЭКСПОРТ') or line.startswith('Всего'):
+                        continue
+                    if line.startswith('Запись #') or line.startswith('-'):
+                        continue
+                    if ' : ' in line:
+                        parts = line.split(' : ', 1)
+                        if len(parts) == 2:
+                            key = parts[0].strip()
+                            value = parts[1].strip()
+                            if key == 'Название произведения':
+                                song_display_name = value
+                            elif key == 'Название фонограммы':
+                                track_duration = value
+                            elif key == 'Автор музыки':
+                                music_author = value
+                            elif key == 'Автор текста':
+                                lyrics_author = value
+                            elif key == 'Жанр':
+                                genre = value
+                            elif key == 'Исполнитель':
+                                artist_text = value
+                            elif key == 'Изготовитель фонограммы':
+                                phonogram_manufacturer = value
+                            elif key == 'ID':
+                                pass
+                    if line == '' and 'song_display_name' in locals():
+                        try:
+                            song = Song(
+                                song_display_name=song_display_name,
+                                track_duration=track_duration,
+                                music_author=music_author,
+                                lyrics_author=lyrics_author,
+                                genre=genre,
+                                artist_text=artist_text,
+                                phonogram_manufacturer=phonogram_manufacturer
+                            )
+                            db.session.add(song)
+                            songs_added += 1
+                        except Exception as e:
+                            errors.append(str(e))
+
+                        song_display_name = track_duration = music_author = lyrics_author = genre = artist_text = phonogram_manufacturer = ''
             db.session.commit()
         else:
             return jsonify({'error': f'Unsupported file format: {ext}'}), 400
