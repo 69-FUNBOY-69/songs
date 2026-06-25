@@ -55,6 +55,9 @@ class Song(db.Model):
 
 with app.app_context():
     db.create_all()
+    max_id = db.session.execute(text("SELECT COALESCE(MAX(id), 0) FROM songs;")).scalar()
+    db.session.execute(text(f"SELECT setval('songs_id_seq', {max_id + 1}, false);"))
+    db.session.commit()
     print("✅ Таблицы созданы (или уже существуют)")
 
 
@@ -140,10 +143,19 @@ def add_song():
         )
         db.session.add(song)
         db.session.commit()
-        return redirect(url_for('index', page=page, search=search, per_page=per_page, sort_by=sort_by, sort_order=sort_order))
+        
+        max_id = db.session.execute(text("SELECT COALESCE(MAX(id), 0) FROM songs;")).scalar()
+        db.session.execute(text(f"SELECT setval('songs_id_seq', {max_id + 1}, false);"))
+        db.session.commit()
+        
+        total = db.session.execute(text("SELECT COUNT(*) FROM songs;")).scalar()
+        total_pages = (total + per_page - 1) // per_page
+        last_page = total_pages if total_pages > 0 else 1
+        
+        return redirect(url_for('index', page=last_page, search=search, per_page=per_page, sort_by=sort_by, sort_order=sort_order))
 
     return render_template('add.html', page=page, search=search, per_page=per_page, sort_by=sort_by, sort_order=sort_order)
-
+ 
 
 @app.route('/edit/<int:id>', methods=['GET', 'POST'])
 def edit_song(id):
@@ -178,6 +190,9 @@ def delete_song(id):
     song = Song.query.get_or_404(id)
     db.session.delete(song)
     db.session.commit()
+    max_id = db.session.execute(text("SELECT COALESCE(MAX(id), 0) FROM songs;")).scalar()
+    db.session.execute(text(f"SELECT setval('songs_id_seq', {max_id + 1}, false);"))
+    db.session.commit()
     return jsonify({'success': True})
 
 
@@ -186,6 +201,9 @@ def delete_mass():
     ids = request.json.get('ids', [])
     if ids:
         Song.query.filter(Song.id.in_(ids)).delete(synchronize_session=False)
+        db.session.commit()
+        max_id = db.session.execute(text("SELECT COALESCE(MAX(id), 0) FROM songs;")).scalar()
+        db.session.execute(text(f"SELECT setval('songs_id_seq', {max_id + 1}, false);"))
         db.session.commit()
     return jsonify({'success': True, 'deleted': len(ids)})
 
@@ -335,7 +353,7 @@ def export():
                         pass
                 adjusted_width = min(max_length + 4, 80)
                 worksheet.column_dimensions[column_letter].width = adjusted_width
-                    
+            
             for row in worksheet.iter_rows():
                 for cell in row:
                     cell.alignment = cell.alignment.copy(wrap_text=True)
@@ -349,23 +367,11 @@ def export():
         )
     elif format_type == 'txt':
         output = io.StringIO()
-        output.write("=" * 80 + "\n")
-        output.write(" " * 30 + "ЭКСПОРТ БАЗЫ ПЕСЕН\n")
-        output.write("=" * 80 + "\n\n")
-        
-        for idx, row in enumerate(data, 1):
-            output.write(f"Запись #{idx}\n")
-            output.write("-" * 80 + "\n")
-            for key, value in row.items():
-                if value:
-                    output.write(f"{key:25} : {value}\n")
-                else:
-                    output.write(f"{key:25} : (не указано)\n")
-            output.write("\n")
-        
-        output.write("=" * 80 + "\n")
-        output.write(f"Всего записей: {len(data)}\n")
-        output.write("=" * 80 + "\n")
+        headers = list(data[0].keys()) if data else []
+        output.write(','.join(headers) + '\n')
+        for row in data:
+            row_values = [str(row[h]) for h in headers]
+            output.write(','.join(row_values) + '\n')
         
         return send_file(
             io.BytesIO(output.getvalue().encode('utf-8-sig')),
@@ -437,59 +443,34 @@ def import_file():
             
         elif ext == 'txt':
             content = file.read().decode('utf-8-sig')
-            lines = content.strip().split('\n')
-            if lines:
-                for line in lines:
-                    if not line.strip():
-                        continue
-                    if line.startswith('=') or line.startswith('ЭКСПОРТ') or line.startswith('Всего'):
-                        continue
-                    if line.startswith('Запись #') or line.startswith('-'):
-                        continue
-                    if ' : ' in line:
-                        parts = line.split(' : ', 1)
-                        if len(parts) == 2:
-                            key = parts[0].strip()
-                            value = parts[1].strip()
-                            if key == 'Название произведения':
-                                song_display_name = value
-                            elif key == 'Название фонограммы':
-                                track_duration = value
-                            elif key == 'Автор музыки':
-                                music_author = value
-                            elif key == 'Автор текста':
-                                lyrics_author = value
-                            elif key == 'Жанр':
-                                genre = value
-                            elif key == 'Исполнитель':
-                                artist_text = value
-                            elif key == 'Изготовитель фонограммы':
-                                phonogram_manufacturer = value
-                            elif key == 'ID':
-                                pass
-                    if line == '' and 'song_display_name' in locals():
-                        try:
-                            song = Song(
-                                song_display_name=song_display_name,
-                                track_duration=track_duration,
-                                music_author=music_author,
-                                lyrics_author=lyrics_author,
-                                genre=genre,
-                                artist_text=artist_text,
-                                phonogram_manufacturer=phonogram_manufacturer
-                            )
-                            db.session.add(song)
-                            songs_added += 1
-                        except Exception as e:
-                            errors.append(str(e))
-
-                        song_display_name = track_duration = music_author = lyrics_author = genre = artist_text = phonogram_manufacturer = ''
+            reader = csv.DictReader(io.StringIO(content))
+            for row in reader:
+                try:
+                    artist = row.get('Исполнитель', '').strip()
+                    track = row.get('Название фонограммы', '').strip()
+                    song = Song(
+                        song_display_name=f"{artist} - {track}" if artist and track else track or artist or '',
+                        track_duration=track,
+                        music_author=row.get('Автор музыки', '').strip(),
+                        lyrics_author=row.get('Автор текста', '').strip(),
+                        genre=row.get('Жанр', 'CHR').strip(),
+                        artist_text=artist,
+                        phonogram_manufacturer=row.get('Изготовитель фонограммы', '').strip()
+                    )
+                    db.session.add(song)
+                    songs_added += 1
+                except Exception as e:
+                    errors.append(str(e))
             db.session.commit()
         else:
             return jsonify({'error': f'Unsupported file format: {ext}'}), 400
             
     except Exception as e:
         return jsonify({'error': str(e)}), 500
+    
+    max_id = db.session.execute(text("SELECT COALESCE(MAX(id), 0) FROM songs;")).scalar()
+    db.session.execute(text(f"SELECT setval('songs_id_seq', {max_id + 1}, false);"))
+    db.session.commit()
     
     return jsonify({
         'success': True,
